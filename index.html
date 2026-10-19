@@ -261,7 +261,7 @@ input[type=password]{font:inherit;color:var(--ink);background:var(--card);border
 <body>
 <div class="wrap">
   <header class="top">
-    <h1>世界史探究 復習アプリ<small id="appver">第1〜19章 ver.1.02</small></h1>
+    <h1>世界史探究 復習アプリ<small id="appver">第1〜19章 ver.1.03</small></h1>
     <span class="sync" id="sync">記録はこの端末のブラウザに保存されます</span>
   </header>
   <nav id="nav" aria-label="画面"></nav>
@@ -430,8 +430,8 @@ function ask(host,q,mode,opt){opt=opt||{};return new Promise(resolve=>{
 const app=document.getElementById('app');let view='map',stopRun=null,selCell=null,showAll=false,rankTab='wk';
 const VIEWS=[['map','失点マップ'],['drill','復習'],['link','つながり'],['src','史料'],['sync','同時代史'],['hard','用語ハード'],['essay','論述'],['center','センター演習'],['streak','ハイスコア'],['me','個人ページ'],['omake','おまけ']];
 function nav(){const n=document.getElementById('nav');n.replaceChildren(...VIEWS.filter(v=>v[0]!=='class'||owner).map(([k,t])=>el('a',{href:'#'+k,'aria-current':k===view?'page':null,text:t})));}
-function go(v){if(stopRun){stopRun();stopRun=null;}modeOv=null;{const nv=document.getElementById('nav');if(!CUR){view='login';nv.hidden=true;window.scrollTo(0,0);return vLogin();}nv.hidden=false;}if(v==='submit'){meTab='submit';v='me';}view=VIEWS.some(x=>x[0]===v)?v:'map';if(view==='class'&&!owner)view='map';nav();({map:vMap,drill:vDrill,link:vLink,src:vSrc,sync:vSync,hard:vHard,essay:vEssay,center:vCenter,streak:vStreak,me:vMe,omake:vOmake})[view]();}
-addEventListener('hashchange',()=>go(location.hash.slice(1)));
+function go(v){if(stopRun){stopRun();stopRun=null;}modeOv=null;{const nv=document.getElementById('nav');if(!CUR){view='login';nv.hidden=true;window.scrollTo(0,0);return vLogin();}nv.hidden=false;}if(sGet('sr-pending-code','s')&&!pendingBusy){runPending();return;}if(v==='submit'){meTab='submit';v='me';}view=VIEWS.some(x=>x[0]===v)?v:'map';if(view==='class'&&!owner)view='map';nav();({map:vMap,drill:vDrill,link:vLink,src:vSrc,sync:vSync,hard:vHard,essay:vEssay,center:vCenter,streak:vStreak,me:vMe,omake:vOmake})[view]();}
+addEventListener('hashchange',()=>{if(takeHashCode()){if(CUR){runPending();return;}}go(location.hash.slice(1));});
 function nickForm(after){const i=el('input',{type:'text',id:'nick',maxlength:'12',placeholder:'例: 大アミール推し',value:S.nick});const n=el('input',{type:'text',id:'no',maxlength:'3',inputmode:'numeric',style:'width:6em',value:S.no});const m=el('p',{class:'mute'});
   return el('form',{class:'sheet',onsubmit:e=>{e.preventDefault();const v=i.value.trim();if(!v){m.textContent='ニックネームを入力してください。';return;}if(CUR){const er=renameNick(v);if(er){m.textContent=er;return;}}else{S.nick=v.slice(0,12);S.no=n.value.trim().slice(0,3);}save();pushScore();after();}},
     el('h2',{text:'はじめに'}),el('p',{class:'mute',text:'先生に記録を提出するときに使います。あとから変更できます。'}),
@@ -1287,7 +1287,20 @@ function meMiss(){const all=meItems();const host=el('div',{style:'display:flex;f
   return host;}
 /* ---------- ② 紙のテスト ---------- */
 function b64dAny(t){return b64d(t);}
-function importCode(code){let d,ver;try{const t=String(code).trim().replace(/\s+/g,'');const m=t.match(/^SR([12])\./);if(!m)throw 0;ver=+m[1];d=JSON.parse(b64dAny(t.slice(4)));if(!d||!Array.isArray(d.r))throw 0;}catch(e){return 'コードを読み取れませんでした。SR1. または SR2. から最後まで全部を貼り付けてください。';}
+/* 短いコード SR3.(deflate圧縮)と、リンク(#c=コード)からの読み込み (2026.10.19) */
+async function importCodeAsync(code){const t=String(code||'').trim().replace(/\s+/g,'');
+  if(!/^SR3\./.test(t))return importCode(t);
+  try{if(typeof DecompressionStream==='undefined')return 'この端末のブラウザは短いコード(SR3.)に対応していません。先生に SR2. のコードをもらってください。';
+    const b=atob(t.slice(4).replace(/-/g,'+').replace(/_/g,'/'));const u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);
+    const txt=await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();JSON.parse(txt);
+    const e=new TextEncoder().encode(txt);let bin='';for(let i=0;i<e.length;i+=8192)bin+=String.fromCharCode.apply(null,e.subarray(i,i+8192));
+    return importCode('SR2.'+btoa(bin));}catch(e){return 'コードを読み取れませんでした。SR3. から最後まで全部を貼り付けてください。';}}
+function takeHashCode(){const h=location.hash||'';if(!/^#c=/.test(h))return false;let c=h.slice(3);try{c=decodeURIComponent(c);}catch(e){}
+  sSet('sr-pending-code',c,'s');try{history.replaceState(null,'',location.pathname+location.search+'#me');}catch(e){location.hash='me';}return true;}
+let pendingBusy=false;
+async function runPending(){const c=sGet('sr-pending-code','s');if(!c||!CUR||pendingBusy)return false;pendingBusy=true;sDel('sr-pending-code','s');
+  let msg;try{msg=await importCodeAsync(c);}finally{pendingBusy=false;}meTab='paper';go('me');const m2=document.querySelector('#mepaper-msg');if(m2)m2.textContent='リンクから読み込み: '+msg;return true;}
+function importCode(code){let d,ver;try{const t=String(code).trim().replace(/\s+/g,'');const m=t.match(/^SR([12])\./);if(!m)throw 0;ver=+m[1];d=JSON.parse(b64dAny(t.slice(4)));if(!d||!Array.isArray(d.r))throw 0;}catch(e){return 'コードを読み取れませんでした。SR1. SR2. SR3. のいずれかで始まるコードを、最後まで全部貼り付けてください。';}
   if(S.no&&d.no&&normNo(S.no)!==normNo(d.no))return 'このコードは出席番号 '+d.no+' の人のものです(ログイン中: 出席番号 '+S.no+')。自分のコードか、ログインしている人が正しいかを確かめてください。';
   if(d.nk&&S.nick&&normNick(d.nk)!==normNick(S.nick))return 'このコードはニックネーム「'+d.nk+'」の人のものです(ログイン中: 「'+S.nick+'」)。出席番号が同じ別の人のコードかもしれません。先生に確かめてください。';
   if(!S.no&&d.no)S.no=String(d.no);S.paper=S.paper||[];S.paperIds=S.paperIds||[];S.ptests=S.ptests||[];let add=0,link=0,meta='';
@@ -1329,10 +1342,10 @@ function testCard(g){const m=g.meta;const out=el('section',{class:'sheet'});
   else if(m)put(out,el('p',{class:'mute',text:'失点した設問の記録はありません。'}));
   return out;}
 function mePaper(){const host=el('div',{style:'display:flex;flex-direction:column;gap:20px'});
-  const pc=el('textarea',{id:'pcode',rows:'3',placeholder:'先生から受け取ったコード(SR2. または SR1. で始まる)を貼り付け',style:'min-height:0;font-family:var(--mono);font-size:12px'});const pm=el('p',{class:'mute',role:'status'});
+  const pc=el('textarea',{id:'pcode',rows:'3',placeholder:'先生から受け取ったコード(SR3. SR2. SR1. のどれかで始まる)を貼り付け',style:'min-height:0;font-family:var(--mono);font-size:12px'});const pm=el('p',{class:'mute',role:'status'});
   put(host,el('section',{class:'sheet'},el('h2',{text:'先生からのフィードバックを読み込む'}),
     el('p',{class:'mute',text:'紙のテストの得点・失点した設問・先生のコメントが、コードで届きます。読み込むと下に表示され、失点した語句は失点マップ・苦手演習に加わります。同じコードを2回読み込んでも重複しません。'}),pc,
-    el('div',{class:'rowf'},el('button',{class:'btn main',type:'button',text:'読み込む',onclick:()=>{const msg=importCode(pc.value);if(/読み込みました|更新しました/.test(msg)){meTab='paper';vMe();const m2=document.querySelector('#mepaper-msg');if(m2)m2.textContent=msg;}else pm.textContent=msg;}})),pm));
+    el('div',{class:'rowf'},el('button',{class:'btn main',type:'button',text:'読み込む',onclick:async()=>{const msg=await importCodeAsync(pc.value);if(/読み込みました|更新しました/.test(msg)){meTab='paper';vMe();const m2=document.querySelector('#mepaper-msg');if(m2)m2.textContent=msg;}else pm.textContent=msg;}})),pm));
   put(host,el('p',{class:'mute',id:'mepaper-msg',role:'status'}));
   const gs=paperTests();
   const scored=gs.filter(g=>g.meta&&g.meta.sc!=null&&g.meta.full).slice().reverse();
@@ -1600,7 +1613,7 @@ function vOmake(){const T=omkToday();const dt=new Date(T.getTime()+omkOff*864e5)
   app.replaceChildren(...parts);}
 
 /* ---------- boot ---------- */
-booted=true;authBoot();rollWeek();go(location.hash.slice(1));
+booted=true;authBoot();rollWeek();takeHashCode();go(location.hash.slice(1));
 </script>
 </body>
 </html>

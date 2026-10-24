@@ -261,7 +261,7 @@ input[type=password]{font:inherit;color:var(--ink);background:var(--card);border
 <body>
 <div class="wrap">
   <header class="top">
-    <h1>世界史探究 復習アプリ<small id="appver">第1〜19章 ver.1.03</small></h1>
+    <h1>世界史探究 復習アプリ<small id="appver">第1〜19章 ver.1.05</small></h1>
     <span class="sync" id="sync">記録はこの端末のブラウザに保存されます</span>
   </header>
   <nav id="nav" aria-label="画面"></nav>
@@ -1288,14 +1288,44 @@ function meMiss(){const all=meItems();const host=el('div',{style:'display:flex;f
 /* ---------- ② 紙のテスト ---------- */
 function b64dAny(t){return b64d(t);}
 /* 短いコード SR3.(deflate圧縮)と、リンク(#c=コード)からの読み込み (2026.10.19) */
-async function importCodeAsync(code){const t=String(code||'').trim().replace(/\s+/g,'');
+/* 20字の返却コード(例 22M11-K7Q2-X9PD-4TRA)。データは同じ場所の ret_<頭>.json に、コード+出席番号+ニックネームで暗号化して置く (2026.10.24 ver.1.04) */
+const SHORT_RE=/^([0-9A-Z]{2,8})-([0-9A-Z]{4})-([0-9A-Z]{4})-([0-9A-Z]{4})$/;
+function shortCanon(t){const u=String(t||'').normalize('NFKC').toUpperCase().replace(/\s+/g,'').replace(/[‐－―ー−]/g,'-');const m=u.match(SHORT_RE);if(!m)return null;
+  const fix=x=>x.replace(/O/g,'0').replace(/[IL]/g,'1').replace(/U/g,'V');return m[1]+'-'+fix(m[2])+'-'+fix(m[3])+'-'+fix(m[4]);}
+const ub64=t=>{const b=atob(t);const u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u;};
+async function importShort(code){if(!CUR||!S.no||!S.nick)return 'ログインしてから読み込んでください。';
+  if(!(window.crypto&&crypto.subtle))return 'この端末のブラウザでは20字コードを読み込めません。先生に SR2. のコードをもらってください。';
+  const pre=code.split('-')[0];let db;
+  try{const r=await fetch('ret_'+pre+'.json?t='+Date.now(),{cache:'no-store'});if(!r.ok)throw 0;db=await r.json();}catch(e){return '返却データを読み込めませんでした。ネットにつながっているか確かめて、もう一度試してください。';}
+  const enc=new TextEncoder();
+  const idb=new Uint8Array(await crypto.subtle.digest('SHA-256',enc.encode('id|'+code)));const id=[...idb.slice(0,12)].map(x=>x.toString(16).padStart(2,'0')).join('');
+  const e=db&&db.e&&db.e[id];if(!e)return 'このコードの返却データはまだありません。先生に確かめてください。';
+  try{const base=await crypto.subtle.importKey('raw',enc.encode(code+'|'+normNo(S.no)+'|'+normNick(S.nick)),'PBKDF2',false,['deriveKey']);
+    const key=await crypto.subtle.deriveKey({name:'PBKDF2',salt:ub64(e.s),iterations:+db.it||200000,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['decrypt']);
+    const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:ub64(e.iv)},key,ub64(e.c));
+    const u=new Uint8Array(pt);let bin='';for(let i=0;i<u.length;i+=8192)bin+=String.fromCharCode.apply(null,u.subarray(i,i+8192));
+    return importCode('SR2.'+btoa(bin));}
+  catch(x){return 'このコードは、ログイン中の人(出席番号 '+S.no+'・「'+S.nick+'」)のものではないようです。自分のコードか、出席番号とニックネームが正しいかを確かめてください。';}}
+/* 暗号化した長いコード SR4.(リンク #c=SR4.…)。鍵は出席番号+ニックネーム、中身は deflate 圧縮した SR2 と同じデータ (2026.10.24 ver.1.05) */
+async function importSR4(t){if(!CUR||!S.no||!S.nick)return 'ログインしてから読み込んでください。';
+  if(!(window.crypto&&crypto.subtle)||typeof DecompressionStream==='undefined')return 'この端末のブラウザではこのコードを読み込めません。先生に確かめてください。';
+  let u;try{u=ub64(t.slice(4).replace(/-/g,'+').replace(/_/g,'/'));if(u.length<40)throw 0;}catch(e){return 'コードを読み取れませんでした。SR4. から最後まで全部を貼り付けてください。';}
+  try{const enc=new TextEncoder();const base=await crypto.subtle.importKey('raw',enc.encode('SR4|'+normNo(S.no)+'|'+normNick(S.nick)),'PBKDF2',false,['deriveKey']);
+    const key=await crypto.subtle.deriveKey({name:'PBKDF2',salt:u.slice(0,16),iterations:200000,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['decrypt']);
+    const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:u.slice(16,28)},key,u.slice(28));
+    const txt=await new Response(new Blob([pt]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();JSON.parse(txt);
+    const e=enc.encode(txt);let bin='';for(let i=0;i<e.length;i+=8192)bin+=String.fromCharCode.apply(null,e.subarray(i,i+8192));
+    return importCode('SR2.'+btoa(bin));}
+  catch(x){return 'このコードは、ログイン中の人(出席番号 '+S.no+'・「'+S.nick+'」)のものではないようです。自分のリンクか、出席番号とニックネームが正しいかを確かめてください。';}}
+async function importCodeAsync(code){const sc=shortCanon(code);if(sc)return importShort(sc);const t=String(code||'').trim().replace(/\s+/g,'');
+  if(/^SR4\./.test(t))return importSR4(t);
   if(!/^SR3\./.test(t))return importCode(t);
   try{if(typeof DecompressionStream==='undefined')return 'この端末のブラウザは短いコード(SR3.)に対応していません。先生に SR2. のコードをもらってください。';
     const b=atob(t.slice(4).replace(/-/g,'+').replace(/_/g,'/'));const u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);
     const txt=await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();JSON.parse(txt);
     const e=new TextEncoder().encode(txt);let bin='';for(let i=0;i<e.length;i+=8192)bin+=String.fromCharCode.apply(null,e.subarray(i,i+8192));
     return importCode('SR2.'+btoa(bin));}catch(e){return 'コードを読み取れませんでした。SR3. から最後まで全部を貼り付けてください。';}}
-function takeHashCode(){const h=location.hash||'';if(!/^#c=/.test(h))return false;let c=h.slice(3);try{c=decodeURIComponent(c);}catch(e){}
+function takeHashCode(){const h=location.hash||'';if(!/^#[ck]=/.test(h))return false;let c=h.slice(3);try{c=decodeURIComponent(c);}catch(e){}
   sSet('sr-pending-code',c,'s');try{history.replaceState(null,'',location.pathname+location.search+'#me');}catch(e){location.hash='me';}return true;}
 let pendingBusy=false;
 async function runPending(){const c=sGet('sr-pending-code','s');if(!c||!CUR||pendingBusy)return false;pendingBusy=true;sDel('sr-pending-code','s');
@@ -1342,7 +1372,7 @@ function testCard(g){const m=g.meta;const out=el('section',{class:'sheet'});
   else if(m)put(out,el('p',{class:'mute',text:'失点した設問の記録はありません。'}));
   return out;}
 function mePaper(){const host=el('div',{style:'display:flex;flex-direction:column;gap:20px'});
-  const pc=el('textarea',{id:'pcode',rows:'3',placeholder:'先生から受け取ったコード(SR3. SR2. SR1. のどれかで始まる)を貼り付け',style:'min-height:0;font-family:var(--mono);font-size:12px'});const pm=el('p',{class:'mute',role:'status'});
+  const pc=el('textarea',{id:'pcode',rows:'3',placeholder:'先生から受け取ったコード(22M11-XXXX-XXXX-XXXX のような20字のコード、または SR4. SR3. SR2. SR1. で始まるコード)を貼り付け',style:'min-height:0;font-family:var(--mono);font-size:12px'});const pm=el('p',{class:'mute',role:'status'});
   put(host,el('section',{class:'sheet'},el('h2',{text:'先生からのフィードバックを読み込む'}),
     el('p',{class:'mute',text:'紙のテストの得点・失点した設問・先生のコメントが、コードで届きます。読み込むと下に表示され、失点した語句は失点マップ・苦手演習に加わります。同じコードを2回読み込んでも重複しません。'}),pc,
     el('div',{class:'rowf'},el('button',{class:'btn main',type:'button',text:'読み込む',onclick:async()=>{const msg=await importCodeAsync(pc.value);if(/読み込みました|更新しました/.test(msg)){meTab='paper';vMe();const m2=document.querySelector('#mepaper-msg');if(m2)m2.textContent=msg;}else pm.textContent=msg;}})),pm));

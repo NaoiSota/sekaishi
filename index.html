@@ -284,7 +284,7 @@ input[type=password]{font:inherit;color:var(--ink);background:var(--card);border
 <body>
 <div class="wrap">
   <header class="top">
-    <h1>世界史探究 復習アプリ<small id="appver">第1〜19章 ver.1.11</small></h1>
+    <h1>世界史探究 復習アプリ<small id="appver">第1〜19章 ver.1.12</small></h1>
     <span class="sync" id="sync">記録はこの端末のブラウザに保存されます</span>
   </header>
   <nav id="nav" aria-label="画面"></nav>
@@ -305,8 +305,13 @@ const jst=(t)=>new Date((t||Date.now())+9*3600e3);
 const today=()=>jst().toISOString().slice(0,10);
 function weekKey(){const d=jst();const dow=(d.getUTCDay()+6)%7;d.setUTCDate(d.getUTCDate()-dow);return d.toISOString().slice(0,10);}
 const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
-const APPVER='ver.1.11';
-const norm=s=>String(s||'').normalize('NFKC').toLowerCase().replace(/[\s「」『』()〔〕\[\]=・･、。,.\-‐]/g,'');
+const APPVER='ver.1.12';
+const norm=s=>String(s||'').normalize('NFKC').toLowerCase().replace(/[\s「」『』()〔〕\[\]=・･゠、。,.\-‐‑‒–—―−]/g,'');
+/* 記述モードの区切り記号の判定を修正 (2026.11.09 ver.1.12)。「ー」「゠」「―」「−」で区切った入力も照合する */
+/* 記述の入力だけに使う前処理:カタカナ直後のハイフン類は長音「ー」とみなす(シ-ナ- → シーナー) */
+const preIn=s=>String(s||'').normalize('NFKC').replace(/([ァ-ヶー])[\-‐‑‒–—―−]/g,'$1ー');
+/* 区切り(＝・)を「ー」で打った入力と照合する形 */
+const sepBar=s=>norm(String(s).normalize('NFKC').replace(/[=・･゠]/g,'ー'));
 /* 表記の異同(ヴ/ウ・バ行、小書きのヵ・ヶ)をそろえた比較用の形。教科書・用語集による表記の違いは正答とする */
 const vnorm=s=>norm(s).replace(/ヵ/g,'カ').replace(/ヶ/g,'ケ').replace(/ヴァ/g,'バ').replace(/ヴィ/g,'ビ').replace(/ヴェ/g,'ベ').replace(/ヴォ/g,'ボ').replace(/ヴ/g,'ブ').replace(/ウィ/g,'ビ').replace(/ウェ/g,'ベ').replace(/ウォ/g,'ボ');
 const hira2kata=s=>String(s||'').replace(/[ぁ-ゖ]/g,c=>String.fromCharCode(c.charCodeAt(0)+0x60));
@@ -388,8 +393,9 @@ function build4(q){let list;
       for(const src of[q.sec.qs.filter(x=>x.kind===q.kind).map(x=>x.disp),q.h?HL.filter(x=>x.sec.ch===q.sec.ch&&x.kind===q.kind).map(x=>x.disp):[],[...(POOL[q.sec.ch][q.kind]||[])],QL.filter(x=>x.kind===q.kind).map(x=>x.disp)])for(const t of shuffle(src))add(t,fb);}
     list=[{text:q.disp,ok:true}].concat(ds);}
   return order(list).map((o,i)=>Object.assign({label:'アイウエ'[i]},o));}
-function judgeText(q,input){const v=norm(input);if(!v)return{ok:false,f:'A'};if(q.alts.some(a=>norm(a)===v))return{ok:true};
+function judgeText(q,input){input=preIn(input);const v=norm(input);if(!v)return{ok:false,f:'A'};if(q.alts.some(a=>norm(a)===v))return{ok:true};
   const vv=vnorm(input);if(q.alts.some(a=>vnorm(a)===vv))return{ok:true,note:'表記の違い(ヴ/ウなど)は正解としています。教科書の表記は「'+q.disp+'」です。'};
+  if(q.alts.some(a=>/[=＝・･゠]/.test(a)&&sepBar(a)===v))return{ok:true,note:'区切りは「＝」です(教科書の表記は「'+q.disp+'」)。「ー」で区切っても正解としています。'};
   {const k=vnorm(hira2kata(input));if(k!==vv&&q.alts.some(a=>vnorm(a)===k))return{ok:false,f:'F',note:'ひらがなで書かれています。カタカナで書きましょう。'};}
   {const nl=s=>vnorm(s).replace(/ー/g,'');if(q.alts.some(a=>nl(a)===nl(input)))return{ok:false,f:'F',note:'のばす音(ー)の有無が違います。'};}
   if((q.c||[]).some(c=>alts(c).some(a=>norm(a)===v)))return{ok:false,f:'B'};

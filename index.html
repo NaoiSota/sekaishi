@@ -284,7 +284,7 @@ input[type=password]{font:inherit;color:var(--ink);background:var(--card);border
 <body>
 <div class="wrap">
   <header class="top">
-    <h1>世界史探究 復習アプリ<small id="appver">第1〜19章 ver.1.12</small></h1>
+    <h1>世界史探究 復習アプリ<small id="appver">第1〜19章 ver.1.17</small></h1>
     <span class="sync" id="sync">記録はこの端末のブラウザに保存されます</span>
   </header>
   <nav id="nav" aria-label="画面"></nav>
@@ -306,6 +306,7 @@ const today=()=>jst().toISOString().slice(0,10);
 function weekKey(){const d=jst();const dow=(d.getUTCDay()+6)%7;d.setUTCDate(d.getUTCDate()-dow);return d.toISOString().slice(0,10);}
 const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
 const APPVER='ver.1.17';
+try{const av=document.getElementById('appver');if(av)av.textContent='第1〜19章 '+APPVER;}catch(e){}
 const norm=s=>String(s||'').normalize('NFKC').toLowerCase().replace(/[\s「」『』()〔〕\[\]=・･゠、。,.\-‐‑‒–—―−]/g,'');
 /* 記述モードの区切り記号の判定を修正 (2026.11.09 ver.1.12)。「ー」「゠」「―」「−」で区切った入力も照合する */
 /* 記述の入力だけに使う前処理:カタカナ直後のハイフン類は長音「ー」とみなす(シ-ナ- → シーナー) */

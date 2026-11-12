@@ -526,7 +526,7 @@ function ask(host,q,mode,opt){opt=opt||{};return new Promise(resolve=>{
 const app=document.getElementById('app');let view='map',stopRun=null,selCell=null,showAll=false,rankTab='wk';
 const VIEWS=[['home','今日の5問'],['map','失点マップ'],['drill','復習(小テスト)'],['link','つながり'],['src','史料'],['sync','同時代史'],['geo','地図'],['hard','用語ハード'],['essay','論述'],['center','センター'],['streak','ハイスコア'],['me','個人ページ'],['omake','おまけ']];
 /* 1.20 2段のタブ。上の段を押すと、そのまとまりで最後に開いていた画面に戻る */
-const GRP=[['今日やる',['home','drill','map']],['演習',['link','src','sync','geo','hard','essay','center']],['記録',['me','streak','omake']]];
+const GRP=[['今日の課題',['home','drill','map']],['演習',['link','src','sync','geo','hard','essay','center']],['記録',['me','streak','omake']]];
 function paperUnread(){let ps=0;try{ps=paperTests().filter(g=>g.meta).length;}catch(e){}if(UI.pseen==null){UI.pseen=ps;saveUI();}return Math.max(0,ps-UI.pseen);}
 function nav(){const n=document.getElementById('nav');const NM=Object.fromEntries(VIEWS);const gi=Math.max(0,GRP.findIndex(g=>g[1].includes(view)));
   const t5=S.t5||{};const tdone=t5.d===today()&&t5.n>=5;const pu=paperUnread();

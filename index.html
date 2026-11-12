@@ -1644,7 +1644,12 @@ function vMe(){if(!METABS.some(t=>t[0]===meTab))meTab='miss';const ps=paperTests
   const tabs=el('div',{class:'chtabs subtabs',role:'tablist','aria-label':'個人ページ'},METABS.map(([k,t])=>el('button',{type:'button',role:'tab',class:'chtab'+(meTab===k?' on':''),'aria-selected':String(meTab===k),onclick:()=>{meTab=k;vMe();window.scrollTo(0,0);}},t,k==='paper'&&ps?el('span',{class:'badge','aria-hidden':'true',text:ps}):null)));
   const head=el('section',{class:'sheet'},el('div',{class:'rowf',style:'justify-content:space-between'},el('h2',{text:'個人ページ'}),el('span',{class:'mute',text:(S.no?'出席番号 '+S.no+'　':'')+(S.nick||'')})),tabs);
   const body=({miss:meMiss,paper:mePaper,cross:meCross,submit:meSubmit,device:meAccount})[meTab]();
-  body.style.marginTop='20px';app.replaceChildren(head,body,feedbackCard());}
+  body.style.marginTop='20px';
+  /* 記録の控え(引き継ぎコード)を2週間以上とっていないときの案内。ホームから個人ページの下部へ移した(1.20) */
+  const bk=(S.total||0)>=30&&(!S.lastExp||dayDiff(S.lastExp,today())>=14)&&meTab!=='device'?el('section',{class:'sheet notice',style:'margin-top:20px'},
+    el('p',{style:'margin:0'},el('b',{text:'記録の控えをとりましょう'}),'　記録はこの端末のブラウザの中にだけあります。「アカウント」の引き継ぎコードをコピーして、自分のメモなどに保存しておきましょう。'+(S.lastExp?'(前回: '+S.lastExp+')':'')),
+    el('div',null,el('button',{class:'btn sm',type:'button',text:'アカウントを開く',onclick:()=>{meTab='device';vMe();window.scrollTo(0,0);}}))):'';
+  app.replaceChildren(head,body,feedbackCard(),bk);}
 /* ---------- 要望・バグの報告 ---------- */
 const FEEDBACK_URL='https://docs.google.com/forms/d/e/1FAIpQLSdxX2gtUOZdsiTMqp0Jv57FWU8HalcI1H04kUdY6Ej1X6V4QQ/viewform';
 function feedbackCard(){const info='アプリの版: '+APPVER+'\n画面: '+(MODEL[view]||view)+(view==='me'?' / '+(METABS.find(t=>t[0]===meTab)||['',''])[1]:'')+'\n画面の幅: '+innerWidth+'px\nブラウザ: '+navigator.userAgent;
@@ -2013,9 +2018,7 @@ function vHome(){const c=counts();const first=!(S.total>0);const out=[];
   if(!S.nick)out.push(nickForm(()=>go('home')));
   const L=S.log||{};let n7=0,k7=0;for(let i=0;i<7;i++){const g=L[addDays(today(),-i)];if(g){n7+=g[0];k7+=g[1];}}
   const notes=[];
-  if((S.total||0)>=30&&(!S.lastExp||dayDiff(S.lastExp,today())>=14))notes.push(el('section',{class:'sheet notice'},
-    el('p',{style:'margin:0'},el('b',{text:'記録の控えをとりましょう'}),'　記録はこの端末のブラウザの中にだけあります。個人ページ「アカウント」の引き継ぎコードをコピーして、自分のメモなどに保存しておきましょう。'+(S.lastExp?'(前回: '+S.lastExp+')':'')),
-    el('div',null,el('a',{class:'btn sm',href:'#me',style:'text-decoration:none',text:'アカウントのページへ',onclick:()=>{meTab='device';}}))));
+  /* 記録の控えの案内は個人ページの下部へ移した(1.20) */
   const pu=paperUnread();
   if(pu)notes.push(el('section',{class:'sheet notice'},el('p',{style:'margin:0'},el('b',{text:'紙のテストが返却されました('+pu+'件)'}),'　失点は失点マップと復習の出題に入っています。得点と先生のコメントは個人ページで見られます。'),
     el('div',null,el('a',{class:'btn sm',href:'#me',style:'text-decoration:none',text:'見る',onclick:()=>{meTab='paper';}}))));

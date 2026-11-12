@@ -2007,7 +2007,7 @@ function nextCard(first,c){const NM=Object.fromEntries(VIEWS);const items=[];con
   if(!first&&weakN)items.push(nx('失点語句だけ復習(10問)',c.fixed?'確定(2回以上)'+c.fixed+'語を先に出します':'候補の'+weakN+'語から出します',()=>runDrill(pick('weak',10),'auto',null,()=>go('home'))));
   const L=UI.last;if(L&&NM[L.v])items.push(nx('前回の続き：'+NM[L.v],relDay(L.d)+'に使いました',null,'#'+L.v));
   if(first||items.length<2){items.push(nx('つながりで覚える','年代の並べ替え・国や人物の分類',null,'#link'));if(items.length<3)items.push(nx('ハイスコアに挑戦','4択を連続で何問正解できるか',null,'#streak'));}
-  return el('section',{class:'sheet'},el('h2',{text:first?'ほかにできること':'次の一手'}),el('div',{class:'nexts'},items.slice(0,3)));}
+  return el('section',{class:'sheet'},el('h2',{text:first?'ほかにできること':'次の学習'}),el('div',{class:'nexts'},items.slice(0,3)));}
 function fold(title,sum,card){const h=card.querySelector('h2');if(h)h.remove();return el('details',{class:'fold'},el('summary',null,el('b',{text:title}),el('span',{text:sum})),card);}
 function vHome(){const c=counts();const first=!(S.total>0);const out=[];
   if(!S.nick)out.push(nickForm(()=>go('home')));

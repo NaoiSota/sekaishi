@@ -1819,7 +1819,9 @@ Object.assign(GTY,{colp:'植民地の支配国',cola:'植民地の位置',ter:'�
 const CPOW=['UK','FR','DE','IT','PT','BE','ES','NL','US','IN'];
 const cBig=u=>u.a>=3;
 function cOne(u,ty){const rs=CL.filter(x=>x.rg===u.rg);
-  if(ty==='colp'){const pws=[...new Set(rs.map(x=>x.pw))].filter(p=>p!==u.pw);if(pws.length<3)return null;const opts=shuffle([u.pw].concat(shuffle(pws).slice(0,3))).map((p,i)=>({pw:p,label:'アイウエ'[i],ok:p===u.pw,txt:CL.find(x=>x.pw===p).pn}));
+  if(ty==='colp'){/* 「独立を保った」は問題文で案内しているので、選択肢に必ず入れる(2026.11.12) */const PN={UK:'イギリス',FR:'フランス',DE:'ドイツ',IT:'イタリア',PT:'ポルトガル',BE:'ベルギー',ES:'スペイン',NL:'オランダ',US:'アメリカ合衆国',IN:'独立を保った'};
+    const own=shuffle([...new Set(rs.map(x=>x.pw))].filter(p=>p!==u.pw&&p!=='IN')),more=shuffle(['UK','FR','DE','IT','PT','ES','NL'].filter(p=>p!==u.pw&&!own.includes(p)));
+    const need=u.pw==='IN'?3:2,pick=own.concat(more).slice(0,need);const opts=shuffle([u.pw].concat(u.pw==='IN'?[]:['IN'],pick)).map((p,i)=>({pw:p,label:'アイウエ'[i],ok:p===u.pw,txt:(CL.find(x=>x.pw===p)||{}).pn||PN[p]}));
     return{ty,rg:u.rg,key:u,opts,stem:'1914年ごろ、地図中で色をつけた地域を植民地・保護国などとしていた国はどれか(独立国の場合は「独立を保った」)。'};}
   if(u.pw==='IN')return null;const ds=[];for(const x of shuffle(rs.filter(x=>x.pw!==u.pw&&cBig(x)))){if(ds.length>=3)break;if(!ds.some(d=>d.pw===x.pw)||rs.length<12)ds.push(x);}if(ds.length<3)return null;
   const opts=shuffle([u].concat(ds)).map((x,i)=>({u:x,label:'アイウエ'[i],ok:x===u}));

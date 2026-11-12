@@ -562,7 +562,7 @@ function todayCard(){const t=S.t5||{},done=t.d===today()&&t.n>=5,sel=tSel(),due=
 function prevCard(){rollWeek();const p=S.prev,c=clearedNow()-(S.wkClr0||0);const rate=(a,b)=>b?Math.round(a/b*100)+'%':'—';
   const rows=[['解答数',p?p.ans:null,S.wkAns||0],['正答率',p?rate(p.correct,p.ans):null,rate(S.wkCorrect||0,S.wkAns||0)],['連続正解ベスト',p?p.best:null,S.wkBest||0],['克服した語句',p?p.clr:null,Math.max(0,c)]];
   const tb=el('tbody');rows.forEach(([k,a,b])=>tb.append(el('tr',null,el('th',{text:k}),el('td',{class:'r',text:a==null?'—':String(a)}),el('td',{class:'r',text:String(b)}))));
-  return el('section',{class:'sheet'},el('h2',{text:'先週の自分と対戦'}),p?null:el('p',{class:'mute',text:'先週の記録はまだありません。来週から、今週の自分が相手になります。'}),
+  return el('section',{class:'sheet'},el('h2',{text:'先週と比較'}),p?null:el('p',{class:'mute',text:'先週の記録はまだありません。来週から、今週の自分が相手になります。'}),
     el('div',{class:'tablewrap'},el('table',{class:'vs'},el('thead',null,el('tr',null,el('th',{text:''}),el('th',{class:'r',text:'先週'+(p?'('+p.wk.slice(5).replace('-','/')+'〜)':'')}),el('th',{class:'r',text:'今週'}))),tb)));}
 function trendCard(){const L=S.log||{};const days=[];for(let i=13;i>=0;i--)days.push(addDays(today(),-i));const data=days.map(d=>{const g=L[d]||[0,0,0];return{d,n:g[0],ok:g[1]};});
   const mx=Math.max(5,...data.map(x=>x.n));const W=560,H=170,pl=28,pb=22,pt=8,bw=(W-pl)/14;const y=v=>pt+(H-pt-pb)*(1-v/mx);
@@ -2021,7 +2021,7 @@ function vHome(){const c=counts();const first=!(S.total>0);const out=[];
     el('div',null,el('a',{class:'btn sm',href:'#me',style:'text-decoration:none',text:'見る',onclick:()=>{meTab='paper';}}))));
   const left=[heroCard(first,c),drillCard(),...notes];
   const right=[nextCard(first,c),fold('学習の推移(直近14日)',n7?'直近7日 '+n7+'問・正答率 '+Math.round(k7/n7*100)+'%':'まだ記録がありません',trendCard())];
-  if(!first){rollWeek();right.push(fold('先週の自分と対戦','今週 '+(S.wkAns||0)+'問'+(S.prev?' / 先週 '+S.prev.ans+'問':''),prevCard()));}
+  if(!first){rollWeek();right.push(fold('先週と比較','今週 '+(S.wkAns||0)+'問'+(S.prev?' / 先週 '+S.prev.ans+'問':''),prevCard()));}
   out.push(el('div',{class:'homegrid'},el('div',{class:'stack'},left),el('div',{class:'stack'},right)));
   app.replaceChildren(...out);}
 /* ---------- boot ---------- */

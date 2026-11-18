@@ -279,6 +279,24 @@ input[type=password]{font:inherit;color:var(--ink);background:var(--card);border
 .omk-x{font-size:14px;border-top:1px dashed var(--line);padding-top:8px}
 .omk-qz{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:12px}
 .omk-qz .qtext{font-size:16px}
+/* 1.21 復習(小テスト): 章 → 節の一覧 → 節のページ(問題の一覧) */
+.secl{display:flex;flex-direction:column;gap:8px}
+.sr{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:2px 10px;align-items:center;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:inherit;text-align:left;cursor:pointer;width:100%}
+.sr.cur{border-color:var(--accent);box-shadow:inset 4px 0 0 var(--accent)}
+.sr .id{font:600 13px var(--mono);color:var(--mute)}.sr .tt{font-weight:700;font-size:14px;line-height:1.4}
+.sr .go{grid-row:1/3;grid-column:3;color:var(--mute);font-size:18px}
+.sr .meta{grid-column:1/3;display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;font-size:12px;color:var(--mute)}
+.qbar{display:inline-flex;gap:2px}.qbar i{width:11px;height:8px;border-radius:2px;background:var(--line)}
+.qbar i.ok{background:var(--ink)}.qbar i.cand{background:var(--warn)}.qbar i.fixed{background:var(--miss)}.qbar i.cleared{background:var(--clear)}
+.qleg{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--mute)}.qleg span{display:inline-flex;align-items:center;gap:4px}
+.lastmk{font-size:11px;font-weight:700;color:var(--paper);background:var(--accent);border-radius:4px;padding:0 6px}
+.qlist{display:flex;flex-direction:column}
+.qrow{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:4px 8px;padding:10px 0;border:0;border-bottom:1px solid var(--line);background:none;color:var(--ink);font:inherit;text-align:left;cursor:pointer;width:100%}
+.qrow{align-items:start}.qrow .chip{align-self:start;justify-self:end}
+.qrow .no{font:700 14px var(--mono);color:var(--mute);padding-top:2px}.qrow .qt{font-size:14px;line-height:1.55}
+.qrow .ans{grid-column:2/4;font-size:14px;font-weight:700;color:var(--accent)}
+.qrow .ans.hid{color:var(--mute);font-weight:400;font-size:13px}.qrow .ans.hid span{border:1px dashed var(--line);border-radius:4px;padding:1px 10px;background:var(--soft)}
+.backlk{background:none;border:0;padding:0;font:inherit;font-size:14px;color:var(--accent);text-decoration:underline;cursor:pointer}
 /* 1.20 2段のタブ(上: 今日やる/演習/記録、下: 中身)と、今日の5問ホーム */
 header.top{flex-wrap:nowrap;align-items:baseline;justify-content:space-between}
 header.top h1{min-width:0}
@@ -339,7 +357,7 @@ details.xsec>summary{padding:4px 0}
 <body>
 <div class="wrap">
   <header class="top">
-    <h1>世界史探究 復習アプリ<small id="appver">第1〜19章 ver.1.20</small></h1>
+    <h1>世界史探究 復習アプリ<small id="appver">第1〜19章 ver.1.21</small></h1>
     <span class="sync" id="sync">記録はこの端末のブラウザに保存されます</span>
   </header>
   <nav id="nav" aria-label="画面"></nav>
@@ -361,14 +379,14 @@ const jst=(t)=>new Date((t||Date.now())+9*3600e3);
 const today=()=>jst().toISOString().slice(0,10);
 function weekKey(){const d=jst();const dow=(d.getUTCDay()+6)%7;d.setUTCDate(d.getUTCDate()-dow);return d.toISOString().slice(0,10);}
 const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
-const APPVER='ver.1.20';
+const APPVER='ver.1.21';
 try{const av=document.getElementById('appver');if(av)av.replaceChildren(el('span',{class:'chr',text:'第1〜19章 '}),APPVER);}catch(e){}
 /* 1.19 解答中モード: #app に .sheet.run があるあいだ、見出しとタブを隠し、進み具合と「やめる」だけの帯を出す */
 (function(){const A=document.getElementById('app');if(!A||!window.MutationObserver)return;let wasRun=false,po=null;
   const sync=()=>{const r=!!A.querySelector('.sheet.run');document.body.classList.toggle('running',r);
     const p=A.firstElementChild&&A.firstElementChild.matches('p.num')?A.firstElementChild:null;const rp=document.getElementById('runprog');
     if(po){po.disconnect();po=null;}if(r&&p){rp.textContent=p.textContent;po=new MutationObserver(()=>{rp.textContent=p.textContent;});po.observe(p,{childList:true,characterData:true,subtree:true});}else if(rp)rp.textContent='';
-    if(r){const cur=document.querySelector('#nav a[aria-current="page"]');const rn=document.getElementById('runname');if(rn)rn.textContent=cur?cur.textContent:'解答中';}
+    if(r){const cur=document.querySelector('#nav a[aria-current="page"]');const rn=document.getElementById('runname');if(rn){const hl=A.querySelector('.sheet.run');rn.textContent=hl&&hl.dataset.lab?hl.dataset.lab:cur?cur.textContent:'解答中';}}
     if(r&&!wasRun){try{if(GRP[1][1].includes(view)||view==='streak'){UI.last={v:view,d:today()};saveUI();}}catch(e){}}
     if(r!==wasRun){wasRun=r;window.scrollTo(0,0);}};
   new MutationObserver(sync).observe(A,{childList:true});
@@ -669,7 +687,50 @@ let drillPreset=null;
 function scopeSelect(id,withWeak){const s=el('select',{id});if(withWeak){const nd=dueList().filter(q=>!q.x).length;s.append(el('option',{value:'weak',text:'自分の失点語句から'}),el('option',{value:'review',text:'克服した語句の再確認('+nd+'問)'}),el('option',{value:'new',text:'まだ解いていない問題から'}));}
   CHS.forEach(c=>{const g=el('optgroup',{label:'第'+c+'章'});g.append(el('option',{value:'ch'+c,text:'第'+c+'章 全体'}));BANK.filter(b=>b.ch===c).forEach(b=>g.append(el('option',{value:b.id,text:b.id+' '+b.title})));s.append(g);});return s;}
 function seg(name,items,val){return el('div',{class:'seg',role:'radiogroup'},items.map(([v,t])=>el('label',null,el('input',{type:'radio',name,id:name+'-'+v,value:v,checked:v===val}),t)));}
-function vDrill(){const sc=scopeSelect('scope',true);if(drillPreset){sc.value=drillPreset;drillPreset=null;}else if(UI.dsc&&[...sc.options].some(o=>o.value===UI.dsc))sc.value=UI.dsc;
+/* ---------- 1.21 復習(小テスト): 章 → 節の一覧 → 節のページ ---------- */
+let drillCh=null,drillSec=null;
+const secOf=id=>BANK.find(b=>b.id===id);
+function secBar(s){return el('span',{class:'qbar','aria-hidden':'true'},s.qs.map(q=>el('i',{class:status(q.id)})));}
+function secMeta(s){const L=(S.secLast||{})[s.id];if(L)return '前回 '+L.d.slice(5).replace('-','/')+'　'+L.ok+'/'+L.n;return s.qs.some(q=>status(q.id)!=='new')?'':'未着手';}
+function secRow(s,on){return el('button',{class:'sr'+(s.id===UI.dsec?' cur':''),type:'button',onclick:on},el('span',{class:'id',text:s.id}),el('span',{class:'tt',text:s.title}),el('span',{class:'go',text:'›','aria-hidden':'true'}),
+  el('span',{class:'meta'},secBar(s),el('span',{text:s.qs.length+'問'}),el('span',{text:secMeta(s)}),s.id===UI.dsec?el('span',{class:'lastmk',text:'前回'}):null));}
+function qLegend(){return el('div',{class:'qleg'},[['ok','正答'],['cand','候補'],['fixed','確定'],['cleared','克服'],['new','未出題']].map(([c,t])=>el('span',null,el('span',{class:'qbar'},el('i',{class:c})),t)));}
+/* 節の問題を解く。ord: num=番号順(小テストと同じ) / shuf=シャッフル。back: 結果のあと戻る先 */
+function startSec(id,qs,back,whole){const s=secOf(id);const ord=UI.dord||'num',mode=UI.dmode||'auto';const list=ord==='shuf'?shuffle(qs.slice()):qs.slice();
+  runDrill(list,mode,whole?res=>{S.secLast=S.secLast||{};S.secLast[id]={d:today(),ok:res.filter(x=>x.r.ok).length,n:res.length};save();}:null,back,{sec:id,ord});}
+function vDrill(){const pre=drillPreset;drillPreset=null;
+  if(pre&&secOf(pre))drillSec=pre;else if(pre&&/^ch\d+$/.test(pre)){drillCh=+pre.slice(2);drillSec=null;}else if(pre)drillSec=null;
+  if(drillSec&&secOf(drillSec))return vSec(drillSec);
+  const ls=secOf(UI.dsec||'');if(!CHS.includes(drillCh))drillCh=ls?ls.ch:(tMax()||CHS[0]);
+  const tabs=el('div',{class:'chtabs',role:'tablist','aria-label':'章'},CHS.map(c=>el('button',{class:'chtab'+(c===drillCh?' on':''),type:'button',role:'tab','aria-selected':String(c===drillCh),text:c+'章',onclick:()=>{drillCh=c;vDrill();}})));
+  const rows=BANK.filter(b=>b.ch===drillCh).map(b=>secRow(b,()=>{drillSec=b.id;vDrill();window.scrollTo(0,0);}));
+  const main=el('section',{class:'sheet'},el('h2',{text:'復習(小テスト)'}),el('p',{class:'mute',style:'margin:0',text:'章を選び、小テストの範囲の節を押してください。節のページで問題の一覧を見て、全問を解けます。'}),
+    tabs,qLegend(),el('div',{class:'secl'},rows));
+  const of=otherForm(pre);app.replaceChildren(main,of);
+  const on=tabs.querySelector('.on');if(on)tabs.scrollLeft=on.offsetLeft-tabs.clientWidth/2+on.clientWidth/2;
+  if(['weak','review','new'].includes(pre))setTimeout(()=>of.scrollIntoView({block:'start'}),0);}
+function vSec(id){const s=secOf(id);UI.dsec=id;saveUI();const n=s.qs.length;const miss=s.qs.filter(q=>isMiss(status(q.id)));
+  const cnt={ok:0,cand:0,fixed:0,cleared:0,new:0};s.qs.forEach(q=>cnt[status(q.id)]++);
+  const back=()=>{drillSec=id;go('drill');};
+  const read=()=>{const o=f.querySelector('[name=dord]:checked'),m=f.querySelector('[name=mode]:checked');UI.dord=o?o.value:'num';UI.dmode=m?m.value:'auto';saveUI();};
+  const rows=s.qs.map((q,i)=>{const ans=el('span',{class:'ans hid'},el('span',{text:'答えを見る'}));const st=status(q.id);
+    const r=el('button',{class:'qrow',type:'button','aria-expanded':'false',onclick:()=>{const open=r.getAttribute('aria-expanded')!=='true';r.setAttribute('aria-expanded',String(open));
+      ans.className='ans'+(open?'':' hid');ans.replaceChildren(open?'答え：'+q.a:el('span',{text:'答えを見る'}));}},
+      el('span',{class:'no',text:i+1}),el('span',{class:'qt',text:q.t||q.disp}),el('span',{class:'chip '+st,text:STLABEL[st]}),ans);return r;});
+  const L=(S.secLast||{})[id];const nx=BANK[BANK.indexOf(s)+1];
+  const f=el('section',{class:'sheet'},
+    el('div',null,el('button',{class:'backlk',type:'button',text:'‹ 第'+s.ch+'章の一覧',onclick:()=>{drillSec=null;drillCh=s.ch;vDrill();window.scrollTo(0,0);}})),
+    el('h2',{style:'margin:0',text:s.id+' '+s.title}),
+    el('div',{class:'qleg'},el('span',{text:'全'+n+'問'}),el('span',{text:'正答'+cnt.ok+'・候補'+cnt.cand+'・確定'+cnt.fixed+'・克服'+cnt.cleared+'・未出題'+cnt.new}),L?el('span',{text:secMeta(s)}):null),
+    el('div',{class:'f'},el('span',{style:'font-size:13px;font-weight:700',text:'出題順'}),seg('dord',[['num','番号順(小テストと同じ)'],['shuf','シャッフル']],UI.dord||'num')),
+    el('div',{class:'f'},el('span',{style:'font-size:13px;font-weight:700',text:'解答形式'}),seg('mode',[['auto','おまかせ'],['choice','4択'],['text','記述'],['essay','論述']],UI.dmode||'auto')),
+    el('div',{class:'rowf'},el('button',{class:'btn main',type:'button',text:'すべて解く('+n+'問)',onclick:()=>{read();startSec(id,s.qs,back,true);}}),
+      el('button',{class:'btn',type:'button',disabled:miss.length?null:true,title:miss.length?null:'この節に失点(候補・確定)の問題はありません',text:'失点だけ('+miss.length+'問)',onclick:()=>{read();startSec(id,miss,back,false);}})),
+    el('h3',{style:'margin:8px 0 0',text:'問題の一覧'}),el('p',{class:'mute',style:'margin:0',text:'問題を押すと答えが出ます。もう一度押すと隠れます。'}),
+    el('div',{class:'qlist'},rows),
+    nx?el('div',null,el('button',{class:'btn sm',type:'button',text:'次の節へ：'+nx.id+' '+nx.title,onclick:()=>{drillSec=nx.id;vDrill();window.scrollTo(0,0);}})):null);
+  app.replaceChildren(f);}
+function otherForm(pre){const sc=scopeSelect('scope',true);[...sc.querySelectorAll('option')].forEach(o=>{if(/^\d+-\d+$/.test(o.value))o.remove();});if(['weak','review','new'].includes(pre))sc.value=pre;else if(UI.dsc2&&[...sc.options].some(o=>o.value===UI.dsc2))sc.value=UI.dsc2;else sc.value='weak';
   /* 「まだ解いていない問題から」は、何章まで習ったかを先に選ばせる(2026.10.16) */
   const last=CHS[CHS.length-1];const lmsg=el('p',{class:'mute',role:'status'});const lbox=el('div',{class:'f',hidden:true});
   const learned=()=>UI.tset&&CHS.includes(+UI.tmax)?+UI.tmax:(UI.tset&&UI.tmax==null?last:null);
@@ -677,20 +738,20 @@ function vDrill(){const sc=scopeSelect('scope',true);if(drillPreset){sc.value=dr
     el('div',{class:'chtabs',style:'flex-wrap:wrap;overflow:visible',role:'radiogroup','aria-label':'何章まで習ったか'},CHS.map(c=>{const on=m===c;return el('button',{class:'chtab'+(on?' on':''),type:'button',role:'radio','aria-checked':String(on),text:c===last?c+'章(全章)':c+'章まで',onclick:()=>{UI.tmax=c===last?null:c;UI.tset=1;saveUI();drawL();}});})),
     el('p',{class:'mute',text:m?'第'+CHS[0]+'〜'+m+'章のまだ解いていない問題から出します。'+(m<last?'第'+(m+1)+'章以降は出しません。':'')+'(「今日の5問」の範囲も同じになります)':'習った章までを選んでください。'}));lmsg.textContent='';};
   const syncL=()=>{lbox.hidden=sc.value!=='new';if(!lbox.hidden)drawL();};sc.addEventListener('change',syncL);
-  const f=el('form',{class:'sheet',onsubmit:e=>{e.preventDefault();if(sc.value==='new'&&!learned()){lmsg.textContent='先に「何章まで習ったか」を選んでください。';lbox.scrollIntoView({block:'center'});return;}const mode=f.querySelector('[name=mode]:checked').value,n=+f.querySelector('[name=cnt]:checked').value;UI.dsc=sc.value;saveUI();const qs=pick(sc.value,n);runDrill(qs,mode);}},
-    el('h2',{text:'復習する'}),el('label',{class:'f'},'出題範囲',sc),lbox,
+  const f=el('form',{class:'sheet',onsubmit:e=>{e.preventDefault();if(sc.value==='new'&&!learned()){lmsg.textContent='先に「何章まで習ったか」を選んでください。';lbox.scrollIntoView({block:'center'});return;}const mode=f.querySelector('[name=mode]:checked').value,n=+f.querySelector('[name=cnt]:checked').value;UI.dsc2=sc.value;saveUI();const qs=pick(sc.value,n);runDrill(qs,mode);}},
+    el('h2',{text:'ほかの出し方'}),el('p',{class:'mute',style:'margin:0',text:'失点語句・再確認・まだ解いていない問題や、章全体からまとめて出します。'}),el('label',{class:'f'},'出題範囲',sc),lbox,
     el('div',{class:'f'},el('span',{style:'font-size:13px;font-weight:700',text:'解答形式'}),seg('mode',[['auto','おまかせ'],['choice','4択'],['text','記述'],['essay','論述']],'auto')),
     el('p',{class:'mute',text:'おまかせ: 初めての問題は4択、失点語句は記述、確定した語句は論述へと段階を上げます。論述は混同しやすい2語の違いを説明する問題が出ます。'}),
     el('div',{class:'f'},el('span',{style:'font-size:13px;font-weight:700',text:'問題数'}),seg('cnt',[['5','5問'],['10','10問'],['20','20問']],'10')),
     el('div',null,el('button',{class:'btn main',type:'submit',text:'始める'})),lmsg);
-  app.replaceChildren(f);syncL();}
-async function runDrill(qs,mode,onDone,back){back=back||vDrill;if(!qs.length){app.replaceChildren(el('div',{class:'sheet'},el('p',{text:'この範囲に出題できる問題がありません。'}),el('div',null,el('button',{class:'btn',type:'button',text:'戻る',onclick:back}))));return;}
-  let alive=true;stopRun=()=>{alive=false;};const res=[];const prog=el('p',{class:'mute num'});const host=el('div',{class:'sheet run'});app.replaceChildren(prog,host);
+  f.id='otherform';setTimeout(syncL,0);return f;}
+async function runDrill(qs,mode,onDone,back,ro){back=back||vDrill;ro=ro||{};const SEC=ro.sec?secOf(ro.sec):null;if(!qs.length){app.replaceChildren(el('div',{class:'sheet'},el('p',{text:'この範囲に出題できる問題がありません。'}),el('div',null,el('button',{class:'btn',type:'button',text:'戻る',onclick:back}))));return;}
+  let alive=true;stopRun=()=>{alive=false;};const res=[];const prog=el('p',{class:'mute num'});const host=el('div',{class:'sheet run'});if(SEC)host.dataset.lab='復習 '+SEC.id+(ro.ord==='shuf'?'(シャッフル)':'(番号順)');app.replaceChildren(prog,host);
   for(let i=0;i<qs.length&&alive;i++){prog.textContent=(i+1)+' / '+qs.length;const q=qs[i];const r=await ask(host,q,mode==='auto'?autoMode(q):mode==='hauto'?(m=>m==='essay'?'text':m)(autoMode(q)):mode,{nextLabel:()=>i===qs.length-1?'結果を見る':'次へ'});res.push({q,r});}
   if(!alive)return;stopRun=null;modeOv=null;pushScore();const ok=res.filter(x=>x.r.ok).length;if(onDone)onDone(res);const ul=el('ul',{class:'terms'});
-  res.forEach(({q,r})=>{const st=status(q.id);ul.append(el('li',null,el('span',{class:'num',text:r.ok?'○':'×',style:'color:var(--'+(r.ok?'clear':'miss')+')'}),el('span',{class:'t',text:q.disp}),el('span',{class:'chip '+st,text:STLABEL[st]}),r.ok?null:el('span',{class:'sub',text:(r.f?r.f+' '+FACTOR[r.f]:'')+(r.given?'　解答「'+r.given+'」':'')})));});
-  app.replaceChildren(prog,el('div',{class:'sheet'},el('h2',{text:'結果'}),el('p',null,el('span',{class:'big',text:ok}),' / '+qs.length+' 問正解'),ul,
-    el('div',{class:'rowf'},el('button',{class:'btn main',type:'button',text:back===vDrill?'続けて復習':'続ける',onclick:back}),el('a',{class:'btn',href:'#map',style:'text-decoration:none',text:'失点マップを見る'}))));prog.textContent='';}
+  res.forEach(({q,r})=>{const st=status(q.id);ul.append(el('li',null,el('span',{class:'num',text:r.ok?'○':'×',style:'color:var(--'+(r.ok?'clear':'miss')+')'}),SEC?el('span',{class:'num',style:'color:var(--mute)',text:'問'+(SEC.qs.indexOf(q)+1)}):null,el('span',{class:'t',text:q.disp}),el('span',{class:'chip '+st,text:STLABEL[st]}),r.ok?null:el('span',{class:'sub',text:(r.f?r.f+' '+FACTOR[r.f]:'')+(r.given?'　解答「'+r.given+'」':'')})));});
+  app.replaceChildren(prog,el('div',{class:'sheet'},el('h2',{text:'結果'+(SEC?'　'+SEC.id:'')}),el('p',null,el('span',{class:'big',text:ok}),' / '+qs.length+' 問正解'),ul,
+    el('div',{class:'rowf'},SEC&&ok<qs.length?el('button',{class:'btn main',type:'button',text:'×の'+(qs.length-ok)+'問をもう一度',onclick:()=>{const w=res.filter(x=>!x.r.ok).map(x=>x.q);runDrill(ro.ord==='shuf'?shuffle(w):SEC.qs.filter(q=>w.includes(q)),mode,null,back,ro);}}):null,el('button',{class:'btn'+(SEC&&ok<qs.length?'':' main'),type:'button',text:SEC?'問題の一覧へ':back===vDrill?'続けて復習':'続ける',onclick:back}),el('a',{class:'btn',href:'#map',style:'text-decoration:none',text:'失点マップを見る'}))));prog.textContent='';}
 /* 難関私大 */
 const HCH={};QL.concat(HL).forEach(q=>{if(q.n<=3)(HCH[q.sec.ch]=HCH[q.sec.ch]||[]).push(q);});
 let hOpt={mode:'hauto',cnt:'10',ord:'new'};
@@ -1999,14 +2060,13 @@ function heroCard(first,c){const t=S.t5||{},done=!first&&t.d===today()&&t.n>=5;c
   const why=due||wk?el('p',{class:'why'},'再確認の時期が来た語句 ',el('b',{text:due}),'・失点語句 ',el('b',{text:wk}),' から選びます'):el('p',{class:'why',text:'まだ解いていない重要語句から選びます'});
   return el('section',{class:'sheet hero',id:'herocard'},el('div',{class:'hrow2'},el('h2',{text:'今日の5問'}),el('span',{class:'chip cand',text:'まだ'})),rng,
     el('button',{class:'btn main bigbtn',type:'button',text:'今日の5問を始める',onclick:startToday}),why,kpi);}
-function drillCard(){const sc=scopeSelect('hsc',true);sc.setAttribute('aria-label','復習の範囲');
-  if(UI.dsc&&[...sc.options].some(o=>o.value===UI.dsc))sc.value=UI.dsc;else sc.value='ch'+(tMax()||CHS[CHS.length-1]);
-  const start=n=>{UI.dsc=sc.value;saveUI();runDrill(pick(sc.value,n),'auto',null,()=>go('home'));};
-  return el('section',{class:'sheet hero2'},el('h2',{text:'復習(授業前の小テスト)'}),
-    el('p',{class:'mute',style:'margin:0',text:'小テストの範囲(章・節)を選んで解きます。選んだ範囲は次回も覚えています。'}),
-    el('label',{class:'f'},'範囲',sc),
-    el('div',{class:'rowf'},el('button',{class:'btn main',type:'button',text:'10問 復習する',onclick:()=>start(10)}),el('button',{class:'btn',type:'button',text:'5問',onclick:()=>start(5)}),el('button',{class:'btn',type:'button',text:'20問',onclick:()=>start(20)})),
-    el('p',{class:'mute',style:'margin:0'},el('a',{href:'#drill',text:'解答形式(4択・記述・論述)を選んで復習する ›'})));}
+function drillCard(){const s=secOf(UI.dsec||'');
+  if(!s)return el('section',{class:'sheet hero2'},el('h2',{text:'復習(授業前の小テスト)'}),el('p',{class:'mute',style:'margin:0',text:'小テストの範囲の節を選んで、問題の一覧を見ながら全問を解きます。'}),
+    el('div',null,el('a',{class:'btn main',href:'#drill',style:'text-decoration:none',text:'節を選ぶ',onclick:()=>{drillSec=null;}})));
+  const nx=BANK[BANK.indexOf(s)+1];const open=()=>{drillSec=s.id;go('drill');};
+  return el('section',{class:'sheet hero2'},el('h2',{text:'復習(授業前の小テスト)'}),secRow(s,open),
+    el('div',{class:'rowf'},el('button',{class:'btn main',type:'button',text:'すべて解く('+s.qs.length+'問・'+((UI.dord||'num')==='shuf'?'シャッフル':'番号順')+')',onclick:()=>startSec(s.id,s.qs,()=>go('home'),true)}),el('button',{class:'btn',type:'button',text:'問題の一覧',onclick:open})),
+    nx?el('p',{class:'mute',style:'margin:0'},el('a',{href:'#drill',text:'次の節へ：'+nx.id+' '+nx.title+' ›',onclick:()=>{drillSec=nx.id;}})):null);}
 function nextCard(first,c){const NM=Object.fromEntries(VIEWS);const items=[];const weakN=c.cand+c.fixed;
   const nx=(b,sm,on,href)=>el(href?'a':'button',Object.assign({class:'nx'},href?{href}:{type:'button',onclick:on}),el('span',null,el('b',{text:b}),el('small',{text:sm})),el('i',{text:'›','aria-hidden':'true'}));
   if(!first&&weakN)items.push(nx('失点語句だけ復習(10問)',c.fixed?'確定(2回以上)'+c.fixed+'語を先に出します':'候補の'+weakN+'語から出します',()=>runDrill(pick('weak',10),'auto',null,()=>go('home'))));

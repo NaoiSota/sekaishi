@@ -279,6 +279,13 @@ input[type=password]{font:inherit;color:var(--ink);background:var(--card);border
 .omk-x{font-size:14px;border-top:1px dashed var(--line);padding-top:8px}
 .omk-qz{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:12px}
 .omk-qz .qtext{font-size:16px}
+/* 1.22 4択だけの正答・用語の説明 */
+.chip.ok4{color:var(--mute);border-style:dashed}
+.qbar i.ok4{background:var(--ink);opacity:.35}
+.rexp{grid-column:1/-1;display:flex;flex-direction:column;gap:3px;font-size:13px;line-height:1.6;background:var(--soft);border-radius:6px;padding:8px 10px;margin-top:2px}
+.rexp .rq{color:var(--mute)}.rexp b{font-weight:700}.rexp .src{font-size:11px;color:var(--mute)}
+.shortcuts{display:flex;gap:6px;flex-wrap:wrap}
+.shortcuts .btn{font-size:13px;padding:6px 12px}
 /* 1.21 復習(小テスト): 章 → 節の一覧 → 節のページ(問題の一覧) */
 .secl{display:flex;flex-direction:column;gap:8px}
 .sr{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:2px 10px;align-items:center;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:inherit;text-align:left;cursor:pointer;width:100%}
@@ -357,7 +364,7 @@ details.xsec>summary{padding:4px 0}
 <body>
 <div class="wrap">
   <header class="top">
-    <h1>世界史探究 復習アプリ<small id="appver">第1〜19章 ver.1.21</small></h1>
+    <h1>世界史探究 復習アプリ<small id="appver">第1〜19章 ver.1.22</small></h1>
     <span class="sync" id="sync">記録はこの端末のブラウザに保存されます</span>
   </header>
   <nav id="nav" aria-label="画面"></nav>
@@ -379,7 +386,7 @@ const jst=(t)=>new Date((t||Date.now())+9*3600e3);
 const today=()=>jst().toISOString().slice(0,10);
 function weekKey(){const d=jst();const dow=(d.getUTCDay()+6)%7;d.setUTCDate(d.getUTCDate()-dow);return d.toISOString().slice(0,10);}
 const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
-const APPVER='ver.1.21';
+const APPVER='ver.1.22';
 try{const av=document.getElementById('appver');if(av)av.replaceChildren(el('span',{class:'chr',text:'第1〜19章 '}),APPVER);}catch(e){}
 /* 1.19 解答中モード: #app に .sheet.run があるあいだ、見出しとタブを隠し、進み具合と「やめる」だけの帯を出す */
 (function(){const A=document.getElementById('app');if(!A||!window.MutationObserver)return;let wasRun=false,po=null;
@@ -408,7 +415,11 @@ async function copyText(text,ta){try{await navigator.clipboard.writeText(text);r
   try{const t=ta||el('textarea',{style:'position:fixed;top:-1000px;opacity:0'});if(!ta){t.value=text;document.body.append(t);}t.focus();t.select();const ok=document.execCommand('copy');if(!ta)t.remove();return ok;}catch(e){return false;}}
 function lev(a,b){const m=a.length,n=b.length;if(Math.abs(m-n)>3)return 9;let p=Array.from({length:n+1},(_,i)=>i);for(let i=1;i<=m;i++){const c=[i];for(let j=1;j<=n;j++)c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1));p=c;}return p[n];}
 const FACTOR={A:'未習得',B:'類似語との混同',C:'時期・順序の誤り',D:'内容・因果の取り違え',E:'人物・事項の対応ミス',F:'表記ミス',G:'資料の読み違い',H:'場所・位置の取り違え'};
-const STLABEL={new:'未出題',ok:'正答',cand:'候補',fixed:'確定',cleared:'克服'};
+const STLABEL={new:'未出題',ok:'正答',ok4:'4択のみ',cand:'候補',fixed:'確定',cleared:'克服'};
+/* 1.22 小テストの問題(記述で答えられるもの)は、記述で正解してはじめて「正答」。4択だけで正解したものは「4択のみ」 */
+function needsText(q){return !!(q&&q.alts&&/^\d+-\d+-\d+$/.test(q.id)&&!(q.kind==='k'||q.co));}
+function written(q){const e=S.q[q.id];return !needsText(q)||!!(e&&e.tx);}
+function stCls(q){const st=status(q.id);return st==='ok'&&!written(q)?'ok4':st;}
 const EXTRA={'ユスティニアヌス1世（大帝）':['ユスティニアヌス1世','ユスティニアヌス','ユスティニアヌス大帝','ユスティニアヌス帝'],'カール大帝（シャルルマーニュ）':['カール大帝','カール','カール1世','シャルルマーニュ'],'ピピン（小ピピン）':['ピピン','小ピピン','ピピン3世'],
   /* 教科書・用語集で表記が分かれる語(2026.10.15 第2版で追加) */
   '贖罪状':['贖罪状','贖宥状','免罪符'],'ヴァイマル憲法':['ヴァイマル憲法','ワイマール憲法','ワイマル憲法'],'ヴァイマル共和国':['ヴァイマル共和国','ワイマール共和国','ワイマル共和国'],
@@ -446,11 +457,17 @@ function setSync(){return;const t=!booted?'接続を確認中…':!db||!uid?'こ
 function status(id){const e=S.q[id];if(!e)return'new';if(!e.w)return'ok';if(e.ok&&e.ok.length>=2)return'cleared';return e.w>=2?'fixed':'cand';}
 const REVIEW=[7,30,90];
 function reviewDue(e){if(!e||!e.cd)return false;const iv=REVIEW[e.rv||0];return iv!=null&&dayDiff(e.cd,today())>=iv;}
-function isDue(q){return status(q.id)==='cleared'&&reviewDue(S.q[q.id]);}
+const OKREV=[30,90];
+function okDue(q){const e=S.q[q.id];if(!e||status(q.id)!=='ok')return false;const od=e.od||tsDate(e.t);if(!od)return false;
+  if(!written(q))return dayDiff(od,today())>=7;const iv=OKREV[e.orv||0];return iv!=null&&dayDiff(od,today())>=iv;}
+function isDue(q){const st=status(q.id);return(st==='cleared'&&reviewDue(S.q[q.id]))||(st==='ok'&&okDue(q));}
 function dueList(){return QL.concat(XL,HL,RGL).filter(isDue);}
-function record(q,ok,f,given){rollWeek();const e=S.q[q.id]||(S.q[q.id]={w:0,r:0,ok:[]});const d=today();const was=status(q.id);
+function record(q,ok,f,given,md){rollWeek();const e=S.q[q.id]||(S.q[q.id]={w:0,r:0,ok:[]});const d=today();const was=status(q.id);const due0=was==='ok'&&okDue(q);const tx0=!!e.tx;
   if(ok){e.r++;if(e.w&&!e.ok.includes(d))e.ok.push(d);S.correct++;S.wkCorrect++;if(was==='cleared'&&reviewDue(e)){e.rv=(e.rv||0)+1;e.cd=d;e.rok=1;}}
-  else{e.w++;e.ok=[];e.f=f||'A';e.lw=d;{const mo=curMode();(e.ms||(e.ms={}))[mo]=(e.ms[mo]||0)+1;}e.c=given?String(given).slice(0,40):'';if(was==='cleared')e.back=d;delete e.cd;e.rv=0;}
+  else{e.w++;e.ok=[];e.f=f||'A';e.lw=d;{const mo=curMode();(e.ms||(e.ms={}))[mo]=(e.ms[mo]||0)+1;}e.c=given?String(given).slice(0,40):'';if(was==='cleared')e.back=d;delete e.cd;e.rv=0;e.tx=0;delete e.od;e.orv=0;}
+  if(ok&&(md==='text'||md==='essay'))e.tx=1;
+  /* 1.22 正答の出し直し: 4択のみは7日後、記述で正答は30日後・90日後 */
+  if(ok&&status(q.id)==='ok'){if(!e.od||(e.tx&&!tx0)){e.od=d;e.orv=0;}else if(due0){e.od=d;if(written(q))e.orv=(e.orv||0)+1;}}
   if(status(q.id)==='cleared'&&!e.cd){e.cd=d;e.rv=0;}
   e.t=Date.now();S.total++;S.wkAns=(S.wkAns||0)+1;
   const L=S.log||(S.log={});const g=L[d]||(L[d]=[0,0,0]);g[0]++;if(ok)g[1]++;g[2]=clearedNow();const ks=Object.keys(L).sort();if(ks.length>120)ks.slice(0,ks.length-120).forEach(k=>delete L[k]);
@@ -462,7 +479,7 @@ async function pushScore(){if(!db||!uid||!cloudOK||!S.nick)return;const c=counts
 function yrv(t){const m=String(t).match(/^(前|紀元前)?(\d+)(年|世紀)/);return m?(m[1]?-1:1)*+m[2]:null;}
 function order(list){if(list.every(o=>yrv(o.text)!=null))return list.slice().sort((a,b)=>yrv(a.text)-yrv(b.text));return shuffle(list);}
 function descOf(t){for(const a of alts(t)){const d=DESC[norm(a)];if(d)return d;}return null;}
-function whatIs(given,self){const g=lookup(given);if(g&&g!==self)return'「'+g.disp+'」は → '+g.t;if(g)return null;const d=descOf(given);return d?'「'+d[0]+'」は → '+d[1]:null;}
+function whatIs(given,self){const g=lookup(given);if(g&&g!==self)return'「'+g.disp+'」は → '+(defOf(g.disp)||g.t);if(g)return null;const d=descOf(given);return d?'「'+d[0]+'」は → '+d[1]:null;}
 function build4(q){let list;
   if(q.o)list=q.o.map(o=>({text:o[0],ok:!o[1],f:o[1]}));
   else{const ds=[];const bad=new Set(q.alts.map(norm));bad.add(norm(q.disp));const badv=new Set(q.alts.map(vnorm));
@@ -491,7 +508,7 @@ function judgeText(q,input){input=preIn(input);const v=norm(input);if(!v)return{
 function essayTask(q){const p=q.c&&q.c[0]?lookup(q.c[0]):null;
   if(p&&p!==q)return{prompt:'「'+q.disp+'」と「'+p.disp+'」の違いがわかるように、60〜80字で説明せよ。',ref:['「'+q.disp+'」… '+q.t,'「'+p.disp+'」… '+p.t],lim:[60,80]};
   return{prompt:'「'+q.disp+'」について、30〜60字で説明せよ。',ref:['「'+q.disp+'」… '+q.t],lim:[30,60]};}
-function autoMode(q){const st=status(q.id),e=S.q[q.id];if(q.kind==='k'||q.co)return'choice';if(st==='cleared')return'text';if(st==='fixed')return e.ok.length?'essay':'text';if(st==='cand')return'text';return'choice';}
+function autoMode(q){const st=status(q.id),e=S.q[q.id];if(q.kind==='k'||q.co)return'choice';if(st==='ok'&&!written(q))return'text';if(st==='cleared')return'text';if(st==='fixed')return e.ok.length?'essay':'text';if(st==='cand')return'text';return'choice';}
 function pick(scope,n){const pr=q=>{const st=status(q.id);return(st==='fixed'?2:1)*q.n+Math.random()*3;};let a;
   const weak=QL.filter(q=>['cand','fixed'].includes(status(q.id))).sort((x,y)=>pr(y)-pr(x));
   const fresh=shuffle(QL.filter(q=>status(q.id)==='new')).sort((x,y)=>y.n-x.n);
@@ -503,10 +520,10 @@ function pick(scope,n){const pr=q=>{const st=status(q.id);return(st==='fixed'?2:
 /* ---------- question UI: resolves {ok,f,given} ---------- */
 function ask(host,q,mode,opt){opt=opt||{};return new Promise(resolve=>{
   if((mode==='essay'||mode==='text')&&(q.kind==='k'||q.co))mode='choice';
-  const head=el('div',{class:'qhead'},el('span',{class:'num',text:q.id}),el('span',{text:q.sec.title}),el('span',{class:'freq',title:'用語集の頻度',text:q.n}),el('span',{class:'chip '+status(q.id),text:STLABEL[status(q.id)]}),el('span',{text:{choice:'4択',text:'記述',essay:'論述'}[mode]}));
+  const head=el('div',{class:'qhead'},el('span',{class:'num',text:q.id}),el('span',{text:q.sec.title}),el('span',{class:'freq',title:'用語集の頻度',text:q.n}),el('span',{class:'chip '+stCls(q),text:STLABEL[stCls(q)]}),el('span',{text:{choice:'4択',text:'記述',essay:'論述'}[mode]}));
   const body=el('div',{style:'display:flex;flex-direction:column;gap:12px'});const fb=el('div',{class:'fb',hidden:true});
   host.replaceChildren(head,body,fb);let done=false;
-  function finish(r,extra){if(done)return;done=true;if(opt.onAnswer)opt.onAnswer();const before=status(q.id);record(q,r.ok,r.f,r.given);const after=status(q.id);
+  function finish(r,extra){if(done)return;done=true;if(opt.onAnswer)opt.onAnswer();const before=status(q.id);record(q,r.ok,r.f,r.given,mode);const after=status(q.id);
     fb.hidden=false;fb.append(el('div',{class:'verdict '+(r.ok?'ok':'ng'),text:r.ok?'正解':(r.timeout?'時間切れ':'不正解')}));
     const dl=el('dl');const row=(k,v)=>dl.append(el('dt',{text:k}),el('dd',null,v));
     if(mode!=='essay')row('正答',q.disp);
@@ -602,6 +619,11 @@ function saveUI(){try{localStorage.setItem(UIK,JSON.stringify(UI));}catch(e){}}
 const MAPL=()=>QL.concat(XL);
 const chOf=q=>q.sec.ch;
 const isMiss=st=>st==='cand'||st==='fixed';
+/* 1.22 用語の説明(用語集の記述をもとに要約)。試行: 11-05 */
+const TDEF={"ツヴィングリ": "スイスの宗教改革者。チューリヒで改革を進め、聖餐の解釈をめぐってルターと対立した。", "ユグノー": "フランスのカルヴァン派。「同盟者」の意で、はじめはカトリック側からの蔑称だった。", "メアリ1世": "テューダー朝の女王。カトリックに戻して新教徒を弾圧し、「血まみれのメアリ」と呼ばれた。", "プロテスタント": "教皇権を認めず、カトリック教会から分かれた宗派の総称。ルター派諸侯の「抗議」が語源。", "カルヴァン": "フランス出身の宗教改革者。ジュネーヴで改革を進め、予定説をとなえて長老主義を確立した。", "予定説": "救われるかどうかは神があらかじめ定めていて、善行や努力では変わらないとする教え。", "長老制": "牧師と信者が選んだ長老が教会を運営する、カルヴァン派の制度。上から任命される司教をおかない。", "ピューリタン（清教徒）": "イングランドのカルヴァン派。国教会の改革を不十分とし、教義の純化を求めた。", "ヘンリ8世": "テューダー朝の国王。離婚を認めない教皇と対立し、首長法でイギリス国教会を成立させた。", "首長法（国王至上法）": "1534年の法。国王を国教会の最高の首長とし、イングランドの教会をカトリックから切り離した。", "統一法": "国教会の祈祷や礼拝を統一する法。1559年にエリザベス1世が定め、国教会を確立した。", "ゴイセン": "ネーデルラントのカルヴァン派。「乞食」の意で、はじめはカトリック側からの蔑称だった。", "プレスビテリアン（長老派）": "スコットランドのカルヴァン派。長老主義の教会制度をとったことが名の由来。", "ミュンツァー": "ドイツの宗教改革者。改革を社会改革に結びつけてルターと対立し、ドイツ農民戦争を指導した。", "ルター": "ドイツの宗教改革者。1517年に「九十五カ条の論題」で贖罪状を批判し、宗教改革の発端をつくった。", "エリザベス1世": "テューダー朝の女王。統一法で国教会を確立し、スペインの無敵艦隊を破った。", "メアリ2世": "ジェームズ2世の娘。名誉革命ののち、夫のウィリアム3世とともに王位についた。", "アン女王": "ステュアート朝最後の女王。1707年にスコットランドと合同し、グレートブリテン王国を成立させた。"};
+/* 用語の説明: 復習の語句は TDEF(用語集の記述をもとに要約)、それ以外は既存の DESC。TDEF にまだない語句は空を返す */
+function defOf(t){if(!t)return'';const q=lookup(t);const d=descOf(t)||(q?descOf(q.disp):null);if(q&&TDEF[q.disp])return TDEF[q.disp];return d?d[1]:'';}
+function dispOf(t){const q=lookup(t);if(q)return q.disp;const d=descOf(t);return d?d[0]:t;}
 function cellShown(q){const st=status(q.id);if(UI.f)return isMiss(st)&&(S.q[q.id].f||'A')===UI.f;if(UI.only)return st==='cand'||st==='fixed'||st==='cleared';return true;}
 function chStat(ch){const c={new:0,ok:0,cand:0,fixed:0,cleared:0,n:0};for(const q of MAPL())if(chOf(q)===ch){c[status(q.id)]++;c.n++;}
   c.rest=0;c.fx=0;for(const q of QL.concat(XL,HL))if(chOf(q)===ch){const st=status(q.id);if(isMiss(st)){c.rest++;if(st==='fixed')c.fx++;}}return c;}
@@ -684,17 +706,17 @@ function fillMap(mapSheet,termSheet,PP){
     list.length>12?el('div',null,el('button',{class:'btn sm',type:'button',text:showAll?'上位だけ表示':'すべて表示('+list.length+'語)',onclick:()=>{showAll=!showAll;fillMap(mapSheet,termSheet,PP);}})):'');}
 /* drill */
 let drillPreset=null;
-function scopeSelect(id,withWeak){const s=el('select',{id});if(withWeak){const nd=dueList().filter(q=>!q.x).length;s.append(el('option',{value:'weak',text:'自分の失点語句から'}),el('option',{value:'review',text:'克服した語句の再確認('+nd+'問)'}),el('option',{value:'new',text:'まだ解いていない問題から'}));}
+function scopeSelect(id,withWeak){const s=el('select',{id});if(withWeak){const nd=dueList().filter(q=>!q.x).length;s.append(el('option',{value:'weak',text:'自分の失点語句から'}),el('option',{value:'review',text:'再確認の時期が来た問題('+nd+'問)'}),el('option',{value:'new',text:'まだ解いていない問題から'}));}
   CHS.forEach(c=>{const g=el('optgroup',{label:'第'+c+'章'});g.append(el('option',{value:'ch'+c,text:'第'+c+'章 全体'}));BANK.filter(b=>b.ch===c).forEach(b=>g.append(el('option',{value:b.id,text:b.id+' '+b.title})));s.append(g);});return s;}
 function seg(name,items,val){return el('div',{class:'seg',role:'radiogroup'},items.map(([v,t])=>el('label',null,el('input',{type:'radio',name,id:name+'-'+v,value:v,checked:v===val}),t)));}
 /* ---------- 1.21 復習(小テスト): 章 → 節の一覧 → 節のページ ---------- */
 let drillCh=null,drillSec=null;
 const secOf=id=>BANK.find(b=>b.id===id);
-function secBar(s){return el('span',{class:'qbar','aria-hidden':'true'},s.qs.map(q=>el('i',{class:status(q.id)})));}
+function secBar(s){return el('span',{class:'qbar','aria-hidden':'true'},s.qs.map(q=>el('i',{class:stCls(q)})));}
 function secMeta(s){const L=(S.secLast||{})[s.id];if(L)return '前回 '+L.d.slice(5).replace('-','/')+'　'+L.ok+'/'+L.n;return s.qs.some(q=>status(q.id)!=='new')?'':'未着手';}
 function secRow(s,on){return el('button',{class:'sr'+(s.id===UI.dsec?' cur':''),type:'button',onclick:on},el('span',{class:'id',text:s.id}),el('span',{class:'tt',text:s.title}),el('span',{class:'go',text:'›','aria-hidden':'true'}),
   el('span',{class:'meta'},secBar(s),el('span',{text:s.qs.length+'問'}),el('span',{text:secMeta(s)}),s.id===UI.dsec?el('span',{class:'lastmk',text:'前回'}):null));}
-function qLegend(){return el('div',{class:'qleg'},[['ok','正答'],['cand','候補'],['fixed','確定'],['cleared','克服'],['new','未出題']].map(([c,t])=>el('span',null,el('span',{class:'qbar'},el('i',{class:c})),t)));}
+function qLegend(){return el('div',{class:'qleg'},[['ok','正答(記述)'],['ok4','4択のみ'],['cand','候補'],['fixed','確定'],['cleared','克服'],['new','未出題']].map(([c,t])=>el('span',null,el('span',{class:'qbar'},el('i',{class:c})),t)));}
 /* 節の問題を解く。ord: num=番号順(小テストと同じ) / shuf=シャッフル。back: 結果のあと戻る先 */
 function startSec(id,qs,back,whole){const s=secOf(id);const ord=UI.dord||'num',mode=UI.dmode||'auto';const list=ord==='shuf'?shuffle(qs.slice()):qs.slice();
   runDrill(list,mode,whole?res=>{S.secLast=S.secLast||{};S.secLast[id]={d:today(),ok:res.filter(x=>x.r.ok).length,n:res.length};save();}:null,back,{sec:id,ord});}
@@ -704,16 +726,19 @@ function vDrill(){const pre=drillPreset;drillPreset=null;
   const ls=secOf(UI.dsec||'');if(!CHS.includes(drillCh))drillCh=ls?ls.ch:(tMax()||CHS[0]);
   const tabs=el('div',{class:'chtabs',role:'tablist','aria-label':'章'},CHS.map(c=>el('button',{class:'chtab'+(c===drillCh?' on':''),type:'button',role:'tab','aria-selected':String(c===drillCh),text:c+'章',onclick:()=>{drillCh=c;vDrill();}})));
   const rows=BANK.filter(b=>b.ch===drillCh).map(b=>secRow(b,()=>{drillSec=b.id;vDrill();window.scrollTo(0,0);}));
-  const main=el('section',{class:'sheet'},el('h2',{text:'復習(小テスト)'}),el('p',{class:'mute',style:'margin:0',text:'章を選び、小テストの範囲の節を押してください。節のページで問題の一覧を見て、全問を解けます。'}),
+  const jump=v=>{const sc=document.getElementById('scope');if(!sc)return;sc.value=v;sc.dispatchEvent(new Event('change'));document.getElementById('otherform').scrollIntoView({block:'start'});};
+  const nd=dueList().filter(q=>!q.x).length,nw=QL.filter(q=>isMiss(status(q.id))).length;
+  const shortcuts=el('div',{class:'shortcuts'},el('button',{class:'btn',type:'button',text:'失点語句から('+nw+')',onclick:()=>jump('weak')}),el('button',{class:'btn',type:'button',text:'再確認('+nd+')',onclick:()=>jump('review')}),el('button',{class:'btn',type:'button',text:'まだ解いていない問題',onclick:()=>jump('new')}));
+  const main=el('section',{class:'sheet'},el('h2',{text:'復習(小テスト)'}),shortcuts,el('p',{class:'mute',style:'margin:0',text:'小テストの範囲は、章を選んで節を押してください。節のページで問題の一覧を見て、全問を解けます。'}),
     tabs,qLegend(),el('div',{class:'secl'},rows));
   const of=otherForm(pre);app.replaceChildren(main,of);
   const on=tabs.querySelector('.on');if(on)tabs.scrollLeft=on.offsetLeft-tabs.clientWidth/2+on.clientWidth/2;
   if(['weak','review','new'].includes(pre))setTimeout(()=>of.scrollIntoView({block:'start'}),0);}
 function vSec(id){const s=secOf(id);UI.dsec=id;saveUI();const n=s.qs.length;const miss=s.qs.filter(q=>isMiss(status(q.id)));
-  const cnt={ok:0,cand:0,fixed:0,cleared:0,new:0};s.qs.forEach(q=>cnt[status(q.id)]++);
+  const cnt={ok:0,ok4:0,cand:0,fixed:0,cleared:0,new:0};s.qs.forEach(q=>cnt[stCls(q)]++);
   const back=()=>{drillSec=id;go('drill');};
   const read=()=>{const o=f.querySelector('[name=dord]:checked'),m=f.querySelector('[name=mode]:checked');UI.dord=o?o.value:'num';UI.dmode=m?m.value:'auto';saveUI();};
-  const rows=s.qs.map((q,i)=>{const ans=el('span',{class:'ans hid'},el('span',{text:'答えを見る'}));const st=status(q.id);
+  const rows=s.qs.map((q,i)=>{const ans=el('span',{class:'ans hid'},el('span',{text:'答えを見る'}));const st=stCls(q);
     const r=el('button',{class:'qrow',type:'button','aria-expanded':'false',onclick:()=>{const open=r.getAttribute('aria-expanded')!=='true';r.setAttribute('aria-expanded',String(open));
       ans.className='ans'+(open?'':' hid');ans.replaceChildren(open?'答え：'+q.a:el('span',{text:'答えを見る'}));}},
       el('span',{class:'no',text:i+1}),el('span',{class:'qt',text:q.t||q.disp}),el('span',{class:'chip '+st,text:STLABEL[st]}),ans);return r;});
@@ -721,11 +746,12 @@ function vSec(id){const s=secOf(id);UI.dsec=id;saveUI();const n=s.qs.length;cons
   const f=el('section',{class:'sheet'},
     el('div',null,el('button',{class:'backlk',type:'button',text:'‹ 第'+s.ch+'章の一覧',onclick:()=>{drillSec=null;drillCh=s.ch;vDrill();window.scrollTo(0,0);}})),
     el('h2',{style:'margin:0',text:s.id+' '+s.title}),
-    el('div',{class:'qleg'},el('span',{text:'全'+n+'問'}),el('span',{text:'正答'+cnt.ok+'・候補'+cnt.cand+'・確定'+cnt.fixed+'・克服'+cnt.cleared+'・未出題'+cnt.new}),L?el('span',{text:secMeta(s)}):null),
+    el('div',{class:'qleg'},el('span',{text:'全'+n+'問'}),el('span',{text:'正答'+cnt.ok+'・4択のみ'+cnt.ok4+'・候補'+cnt.cand+'・確定'+cnt.fixed+'・克服'+cnt.cleared+'・未出題'+cnt.new}),L?el('span',{text:secMeta(s)}):null),
     el('div',{class:'f'},el('span',{style:'font-size:13px;font-weight:700',text:'出題順'}),seg('dord',[['num','番号順(小テストと同じ)'],['shuf','シャッフル']],UI.dord||'num')),
     el('div',{class:'f'},el('span',{style:'font-size:13px;font-weight:700',text:'解答形式'}),seg('mode',[['auto','おまかせ'],['choice','4択'],['text','記述'],['essay','論述']],UI.dmode||'auto')),
     el('div',{class:'rowf'},el('button',{class:'btn main',type:'button',text:'すべて解く('+n+'問)',onclick:()=>{read();startSec(id,s.qs,back,true);}}),
       el('button',{class:'btn',type:'button',disabled:miss.length?null:true,title:miss.length?null:'この節に失点(候補・確定)の問題はありません',text:'失点だけ('+miss.length+'問)',onclick:()=>{read();startSec(id,miss,back,false);}})),
+    miss.length?null:el('p',{class:'mute',style:'margin:0',text:'この節に失点(候補・確定)の問題はありません。'}),
     el('h3',{style:'margin:8px 0 0',text:'問題の一覧'}),el('p',{class:'mute',style:'margin:0',text:'問題を押すと答えが出ます。もう一度押すと隠れます。'}),
     el('div',{class:'qlist'},rows),
     nx?el('div',null,el('button',{class:'btn sm',type:'button',text:'次の節へ：'+nx.id+' '+nx.title,onclick:()=>{drillSec=nx.id;vDrill();window.scrollTo(0,0);}})):null);
@@ -749,7 +775,9 @@ async function runDrill(qs,mode,onDone,back,ro){back=back||vDrill;ro=ro||{};cons
   let alive=true;stopRun=()=>{alive=false;};const res=[];const prog=el('p',{class:'mute num'});const host=el('div',{class:'sheet run'});if(SEC)host.dataset.lab='復習 '+SEC.id+(ro.ord==='shuf'?'(シャッフル)':'(番号順)');app.replaceChildren(prog,host);
   for(let i=0;i<qs.length&&alive;i++){prog.textContent=(i+1)+' / '+qs.length;const q=qs[i];const r=await ask(host,q,mode==='auto'?autoMode(q):mode==='hauto'?(m=>m==='essay'?'text':m)(autoMode(q)):mode,{nextLabel:()=>i===qs.length-1?'結果を見る':'次へ'});res.push({q,r});}
   if(!alive)return;stopRun=null;modeOv=null;pushScore();const ok=res.filter(x=>x.r.ok).length;if(onDone)onDone(res);const ul=el('ul',{class:'terms'});
-  res.forEach(({q,r})=>{const st=status(q.id);ul.append(el('li',null,el('span',{class:'num',text:r.ok?'○':'×',style:'color:var(--'+(r.ok?'clear':'miss')+')'}),SEC?el('span',{class:'num',style:'color:var(--mute)',text:'問'+(SEC.qs.indexOf(q)+1)}):null,el('span',{class:'t',text:q.disp}),el('span',{class:'chip '+st,text:STLABEL[st]}),r.ok?null:el('span',{class:'sub',text:(r.f?r.f+' '+FACTOR[r.f]:'')+(r.given?'　解答「'+r.given+'」':'')})));});
+  res.forEach(({q,r})=>{const st=stCls(q);const dq=defOf(q.disp),dg=r.ok||!r.given?'':defOf(r.given);
+    const ex=r.ok?null:el('div',{class:'rexp'},q.t?el('span',{class:'rq',text:'問題：'+q.t}):null,el('span',null,el('b',{text:'正解 '+q.disp}),dq?'　'+dq:''),r.given?el('span',null,el('b',{text:'あなたの答え '+dispOf(r.given)}),dg?'　'+dg:''):null,(dq||dg)?el('span',{class:'src',text:'説明は用語集の記述をもとに要約'}):null);
+    ul.append(el('li',null,el('span',{class:'num',style:'color:var(--'+(r.ok?'clear':'miss')+')'},r.ok?'○':'×',SEC?el('small',{style:'color:var(--mute);margin-left:6px',text:'問'+(SEC.qs.indexOf(q)+1)}):null),el('span',{class:'t',text:q.disp}),el('span',{class:'chip '+st,text:STLABEL[st]}),r.ok?null:el('span',{class:'sub',text:r.f?r.f+' '+FACTOR[r.f]:''}),ex));});
   app.replaceChildren(prog,el('div',{class:'sheet'},el('h2',{text:'結果'+(SEC?'　'+SEC.id:'')}),el('p',null,el('span',{class:'big',text:ok}),' / '+qs.length+' 問正解'),ul,
     el('div',{class:'rowf'},SEC&&ok<qs.length?el('button',{class:'btn main',type:'button',text:'×の'+(qs.length-ok)+'問をもう一度',onclick:()=>{const w=res.filter(x=>!x.r.ok).map(x=>x.q);runDrill(ro.ord==='shuf'?shuffle(w):SEC.qs.filter(q=>w.includes(q)),mode,null,back,ro);}}):null,el('button',{class:'btn'+(SEC&&ok<qs.length?'':' main'),type:'button',text:SEC?'問題の一覧へ':back===vDrill?'続けて復習':'続ける',onclick:back}),el('a',{class:'btn',href:'#map',style:'text-decoration:none',text:'失点マップを見る'}))));prog.textContent='';}
 /* 難関私大 */
